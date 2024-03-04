@@ -193,9 +193,7 @@
           // xử lý khi click play
           playBtn.onclick = function () {
             if (_this.isPlaying) {
-              _this.isPlaying = false;
               audio.pause();
-              player.classList.remove("playing");
             } else {
               audio.play();
             }
@@ -208,7 +206,7 @@
           };
 
           // khi song được pause
-          audio.onplay = function () {
+          audio.onpause = function () {
             _this.isPlaying = false;
             player.classList.remove("playing");
           };
