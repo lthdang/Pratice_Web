@@ -1,0 +1,232 @@
+<!DOCTYPE html>.card-user-name
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Music player</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css"
+      integrity="sha512-HK5fgLBL+xu6dm/Ii3z4xhlSUyZgTT9tuc/hSrtw6uzJOvgRr2a9jyxxT1ely+B+xFAmJKVSTbpM/CuL7qxO8w=="
+      crossorigin="anonymous"
+    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/practice_js.css" />
+  </head>
+  <body>
+    <div class="player">
+      <!-- Dashboard -->
+      <div class="dashboard">
+        <!-- Header -->
+        <header>
+          <h4>Now playing:</h4>
+          <h2>String 57th& 9th</h2>
+        </header>
+
+        <!-- CD -->
+        <div class="cd">
+          <div
+            class="cd-thumb"
+            style="
+              background-image: url('https://i.ytimg.com/vi/jTLhQf5KJSc/maxresdefault.jpg');
+            "
+          ></div>
+        </div>
+
+        <!-- Control -->
+        <div class="control">
+          <div class="btn btn-repeat">
+            <i class="fas fa-redo"></i>
+          </div>
+          <div class="btn btn-prev">
+            <i class="fas fa-step-backward"></i>
+          </div>
+          <div class="btn btn-toggle-play">
+            <i class="fas fa-pause icon-pause"></i>
+            <i class="fas fa-play icon-play"></i>
+          </div>
+          <div class="btn btn-next">
+            <i class="fas fa-step-forward"></i>
+          </div>
+          <div class="btn btn-random">
+            <i class="fas fa-random"></i>
+          </div>
+        </div>
+
+        <input
+          id="progress"
+          class="progress"
+          type="range"
+          value="0"
+          step="1"
+          min="0"
+          max="100"
+        />
+
+        <audio id="audio" src=""></audio>
+      </div>
+
+      <!-- Playlist -->
+      <div class="playlist"></div>
+    </div>
+
+    <script>
+      /**
+       * 1. Render songs
+       * 2. Scroll top
+       * 3. Play/ pause/ seek
+       * 4. CD rotate
+       * 5. Next / prev
+       * 6. Random
+       * 7. Next / Repeat when ended
+       * 8. Active song
+       * 9. Scroll active song into view
+       * 10. Play song when click
+       *
+       */
+
+      const $ = document.querySelector.bind(document);
+      const $$ = document.querySelectorAll.bind(document);
+      const heading = $("header h2");
+      const cdThumb = $(".cd-thumb");
+      const audio = $("#audio");
+      const cd = $(".cd");
+      const playBtn = $(".btn-toggle-play");
+      const player = $(".player");
+
+      const app = {
+        currentIndex: 0,
+        isPlaying: false,
+        songs: [
+          {
+            name: "Someone You Loved",
+            singer: "Benlon Pop Mage",
+            path: "music/Benlon_Pop_Mage__Someone_You_Loved.mp3",
+            image: "img/Benlon_Pop_Mage__Someone_You_Loved.jpg",
+          },
+          {
+            name: "Heartbreak Anniversary",
+            singer: "Giveon",
+            path: "music/Giveon__Heartbreak_Anniversary.mp3",
+            image: "img/Giveon__Heartbreak_Anniversary.jpg",
+          },
+          {
+            name: "I'll Be There",
+            singer: "Gabriela",
+            path: "music/I'll_Be_There__Gabriela Bee.mp3",
+            image: "img/I Will Be There.jpg",
+          },
+          {
+            name: "A Little Braver",
+            singer: "New Empire",
+            path: "music/New_Empire __A_Little_Braver.mp3",
+            image: "img/A Little Braver.jpg",
+          },
+          {
+            name: "Let Her Go",
+            singer: "Passenger",
+            path: "music/Passenger__Let_Her_Go.mp3",
+            image: "img/Let Her Go.jpg",
+          },
+          {
+            name: "Proud Of You",
+            singer: "Fiona Fung",
+            path: "music/Proud_Of_You__Fiona_Fung.mp3",
+            image: "img/Proud Of You.jpg",
+          },
+          {
+            name: "Somewhere Only We Know",
+            singer: "Rhianne",
+            path: "music/somewhere_only_we_know__rhianne.mp3",
+            image: "img/Somewhere Only We Know.jpg",
+          },
+          {
+            name: "Take Me To Your Heart",
+            singer: "Michael Learns To Rock",
+            path: "music/Take_Me_to_Your_Heart__Michael_Learns_To_Rock.mp3",
+            image: "img/Take Me To Your Heart.jpg",
+          },
+        ],
+
+        render: function () {
+          const htmls = this.songs.map((song) => {
+            return `
+                <div class="song">
+                    <div class="thumb"
+                        style="background-image: url('${song.image}')">
+                    </div>
+                    <div class="body">
+                        <h3 class="title">${song.name}</h3>
+                        <p class="author">${song.singer}</p>
+                    </div>
+                    <div class="option">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </div>
+                </div>
+                `;
+          });
+          $(".playlist").innerHTML = htmls.join("");
+        },
+
+        defineProperties: function () {
+          Object.defineProperty(this, "currentSong", {
+            get: function () {
+              return this.songs[this.currentIndex];
+            },
+          });
+        },
+
+        handleEvents: function () {
+          const _this = this;
+          // sử lý phóng to thu nhỏ CD
+          const cdWidth = cd.offsetWidth;
+          document.onscroll = function () {
+            const scrollTop = document.documentElement.scrollTop;
+            const newCdWidth = cdWidth - scrollTop;
+            cd.style.width = newCdWidth > 0 ? newCdWidth + "px" : 0;
+            cd.style.opacity = newCdWidth / cdWidth;
+          };
+          // xử lý khi click play
+          playBtn.onclick = function () {
+            if (_this.isPlaying) {
+              _this.isPlaying = false;
+              audio.pause();
+              player.classList.remove("playing");
+            } else {
+              audio.play();
+            }
+          };
+
+          // khi song được play
+          audio.onplay = function () {
+            _this.isPlaying = true;
+            player.classList.add("playing");
+          };
+
+          // khi song được pause
+          audio.onplay = function () {
+            _this.isPlaying = false;
+            player.classList.remove("playing");
+          };
+        },
+        loadCurrentSong: function () {
+          heading.textContent = this.currentSong.name;
+          cdThumb.style.backgroundImage = `url(${this.currentSong.image})`;
+          audio.src = this.currentSong.path;
+        },
+
+        start: function () {
+          this.defineProperties();
+          this.handleEvents();
+          this.loadCurrentSong();
+          this.render();
+        },
+      };
+      app.start();
+    </script>
+  </body>
+</html>
