@@ -91,7 +91,7 @@
 
       const $ = document.querySelector.bind(document);
       const $$ = document.querySelectorAll.bind(document);
-      const PLAYER_STORAGE_KEY = "HAI_DANG";
+      const PlAYER_STORAGE_KEY = "HAI_DANG";
 
       const heading = $("header h2");
       const cdThumb = $(".cd-thumb");
@@ -111,7 +111,7 @@
         isPlaying: false,
         isRandom: false,
         isRepeat: false,
-        config: JSON.parse(localStorage.getItem(PLAYER_STORAGE_KEY)) || {},
+        config: JSON.parse(localStorage.getItem(PlAYER_STORAGE_KEY)) || {},
         songs: [
           {
             name: "Someone You Loved",
@@ -164,7 +164,7 @@
         ],
         setConfig: function (key, value) {
           this.setConfig[key] = value;
-          localStorage.set(PLAYER_STORAGE_KEY, JSON.stringify(this.config));
+          localStorage.setItem(PlAYER_STORAGE_KEY, JSON.stringify(this.config));
         },
         render: function () {
           const htmls = this.songs.map((song, index) => {
@@ -370,13 +370,12 @@
         },
 
         start: function () {
-          this.loadConfig();
           this.defineProperties();
           this.handleEvents();
           this.loadCurrentSong();
           this.render();
-          repeatBtn.classList.toggle("active", _this.isRepeat);
-          randomBtn.classList.toggle("active", _this.isRandom);
+          randomBtn.classList.toggle("active", this.isRandom);
+          repeatBtn.classList.toggle("active", this.isRepeat);
         },
       };
       app.start();
