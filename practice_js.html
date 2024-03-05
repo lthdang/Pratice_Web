@@ -91,6 +91,8 @@
 
       const $ = document.querySelector.bind(document);
       const $$ = document.querySelectorAll.bind(document);
+      const PLAYER_STORAGE_KEY = "HAI_DANG";
+
       const heading = $("header h2");
       const cdThumb = $(".cd-thumb");
       const audio = $("#audio");
@@ -98,10 +100,18 @@
       const playBtn = $(".btn-toggle-play");
       const player = $(".player");
       const progress = $("#progress");
+      const nextBtn = $(".btn-next");
+      const prevBtn = $(".btn-prev");
+      const randomBtn = $(".btn-random");
+      const repeatBtn = $(".btn-repeat");
+      const playlist = $(".playlist");
 
       const app = {
         currentIndex: 0,
         isPlaying: false,
+        isRandom: false,
+        isRepeat: false,
+        config: JSON.parse(localStorage.getItem(PLAYER_STORAGE_KEY)) || {},
         songs: [
           {
             name: "Someone You Loved",
@@ -119,44 +129,49 @@
             name: "I'll Be There",
             singer: "Gabriela",
             path: "music/I'll_Be_There__Gabriela Bee.mp3",
-            image: "img/I Will Be There.jpg",
+            image: "img/I_Will_Be_There.jpg",
           },
           {
             name: "A Little Braver",
             singer: "New Empire",
             path: "music/New_Empire __A_Little_Braver.mp3",
-            image: "img/A Little Braver.jpg",
+            image: "img/A_Little_Braver.jpg",
           },
           {
             name: "Let Her Go",
             singer: "Passenger",
             path: "music/Passenger__Let_Her_Go.mp3",
-            image: "img/Let Her Go.jpg",
+            image: "img/Let_Her_Go.jpg",
           },
           {
             name: "Proud Of You",
             singer: "Fiona Fung",
             path: "music/Proud_Of_You__Fiona_Fung.mp3",
-            image: "img/Proud Of You.jpg",
+            image: "img/Proud_Of_You.jpg",
           },
           {
             name: "Somewhere Only We Know",
             singer: "Rhianne",
             path: "music/somewhere_only_we_know__rhianne.mp3",
-            image: "img/Somewhere Only We Know.jpg",
+            image: "img/Somewhere_Only_We_Know.jpg",
           },
           {
             name: "Take Me To Your Heart",
             singer: "Michael Learns To Rock",
             path: "music/Take_Me_to_Your_Heart__Michael_Learns_To_Rock.mp3",
-            image: "img/Take Me To Your Heart.jpg",
+            image: "img/Take_Me_To_Your_Heart.jpg",
           },
         ],
-
+        setConfig: function (key, value) {
+          this.setConfig[key] = value;
+          localStorage.set(PLAYER_STORAGE_KEY, JSON.stringify(this.config));
+        },
         render: function () {
-          const htmls = this.songs.map((song) => {
+          const htmls = this.songs.map((song, index) => {
             return `
-                <div class="song">
+                <div class="song ${
+                  index === this.currentIndex ? "active" : ""
+                }" data-index="${index}">
                     <div class="thumb"
                         style="background-image: url('${song.image}')">
                     </div>
@@ -170,7 +185,7 @@
                 </div>
                 `;
           });
-          $(".playlist").innerHTML = htmls.join("");
+          playlist.innerHTML = htmls.join("");
         },
 
         defineProperties: function () {
@@ -183,14 +198,27 @@
 
         handleEvents: function () {
           const _this = this;
-          // sử lý phóng to thu nhỏ CD
           const cdWidth = cd.offsetWidth;
+
+          // xử lý CD quay và dừng
+          const cdThumbAnimate = cdThumb.animate(
+            [{ transform: "rotate(360deg)" }],
+            {
+              duration: 10000, // 10 seconds
+              iterations: Infinity,
+            }
+          );
+
+          cdThumbAnimate.pause();
+
+          // sử lý phóng to thu nhỏ CD
           document.onscroll = function () {
             const scrollTop = document.documentElement.scrollTop;
             const newCdWidth = cdWidth - scrollTop;
             cd.style.width = newCdWidth > 0 ? newCdWidth + "px" : 0;
             cd.style.opacity = newCdWidth / cdWidth;
           };
+
           // xử lý khi click play
           playBtn.onclick = function () {
             if (_this.isPlaying) {
@@ -203,12 +231,14 @@
           // khi song được play
           audio.onplay = function () {
             _this.isPlaying = true;
+            cdThumbAnimate.play();
             player.classList.add("playing");
           };
 
           // khi song được pause
           audio.onpause = function () {
             _this.isPlaying = false;
+            cdThumbAnimate.pause();
             player.classList.remove("playing");
           };
 
@@ -227,18 +257,126 @@
             const seekTime = (audio.duration / 100) * e.target.value;
             audio.currentTime = seekTime;
           };
+
+          //  xử lý khi next song
+          nextBtn.onclick = function () {
+            if (_this.isRandom) {
+              _this.playRandomSong();
+            } else {
+              _this.nextSong();
+            }
+            audio.play();
+            _this.render();
+            _this.scrollToActiveSong();
+          };
+
+          // xử lý khi prev song
+          prevBtn.onclick = function () {
+            if (_this.isRandom) {
+              _this.playRandomSong();
+            } else {
+              _this.prevSong();
+            }
+            audio.play();
+            _this.render();
+            _this.scrollToActiveSong();
+          };
+
+          // active button random
+          randomBtn.onclick = function () {
+            _this.isRandom = !_this.isRandom;
+            _this.setConfig("isRandom", _this.isRandom);
+            randomBtn.classList.toggle("active", _this.isRandom);
+          };
+
+          // Xử lý lặp lại một song
+          repeatBtn.onclick = function (e) {
+            _this.isRepeat = !_this.isRepeat;
+            _this.setConfig("isRepeat", _this.isRepeat);
+            repeatBtn.classList.toggle("active", _this.isRepeat);
+          };
+
+          // xử lý next song khi audio ended
+          audio.onended = function () {
+            if (_this.isRepeat) {
+              audio.play();
+            } else {
+              nextBtn.click();
+            }
+          };
+
+          // listen behavior on click playlist
+          playlist.onclick = function (e) {
+            const songNode = e.target.closest(".song:not(.active)");
+            if (songNode || e.target.closest(".option")) {
+              // xử lý khi click vào song
+              if (e.target.closest(".song:not(.active)")) {
+                _this.currentIndex = Number(songNode.dataset.index);
+                _this.loadCurrentSong();
+                audio.play();
+                _this.render();
+              }
+
+              // xử lý khi click vào option
+              if (e.target.closest(".option")) {
+              }
+            }
+          };
         },
+
+        scrollToActiveSong: function () {
+          setTimeout(() => {
+            $(".song.active").scrollIntoView({
+              behavior: "smooth",
+              block: "nearest",
+            });
+          }, 300);
+        },
+
+        loadConfig: function () {
+          this.isRandom = this.config.isRandom;
+          this.isRepeat = this.config.isRepeat;
+        },
+
         loadCurrentSong: function () {
           heading.textContent = this.currentSong.name;
           cdThumb.style.backgroundImage = `url(${this.currentSong.image})`;
           audio.src = this.currentSong.path;
         },
 
+        nextSong: function () {
+          this.currentIndex++;
+          if (this.currentIndex >= this.songs.length) {
+            this.currentIndex = 0;
+          }
+          this.loadCurrentSong();
+        },
+
+        prevSong: function () {
+          this.currentIndex--;
+          if (this.currentIndex < 0) {
+            this.currentIndex = this.songs.length - 1;
+          }
+          this.loadCurrentSong();
+        },
+
+        playRandomSong: function () {
+          let newIndex;
+          do {
+            newIndex = Math.floor(Math.random() * this.songs.length);
+          } while (newIndex === this.currentIndex);
+          this.currentIndex = newIndex;
+          this.loadCurrentSong();
+        },
+
         start: function () {
+          this.loadConfig();
           this.defineProperties();
           this.handleEvents();
           this.loadCurrentSong();
           this.render();
+          repeatBtn.classList.toggle("active", _this.isRepeat);
+          randomBtn.classList.toggle("active", _this.isRandom);
         },
       };
       app.start();
